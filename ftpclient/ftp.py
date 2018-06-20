@@ -1,6 +1,6 @@
 import ftplib
 import threading
-from urllib.parse import urlparse, unquote
+from urllib.parse import unquote, urlparse
 
 from fman import load_json
 
@@ -18,6 +18,8 @@ class FtpSession(ftplib.FTP):
     def __init__(self, host, port, user, password):
         super().__init__()
         self.connect(host, port)
+        # FIXME ftplib.error_temp: 421 Too many connections from the
+        #       same IP address.
         self.login(user, password)
 
 

@@ -3,22 +3,35 @@
 A [fman](https://fman.io/) FTP Client that uses the powerful [ftputil](https://ftputil.sschwarzer.net) library.
 
 ## Usage
-- **Open ftp location** (`open_ftp_location`): Connect to the given FTP URL.
-- **Open ftp bookmark** (`open_ftp_bookmark`): 
-- **Add ftp bookmark** (`add_ftp_bookmark`)
-- **Remove ftp bookmark** (`remove_ftp_bookmark`)
-- **Open ftp history** (`open_ftp_history`)
-- **Remove ftp history** (`remove_ftp_history`)
+
+### Commands
+
+- **Open ftp location** (`open_ftp_location`): Connect to a FTP server using the given URL.
+- **Add ftp bookmark** (`add_ftp_bookmark`): Bookmark current -or custom- URL.
+- **Open ftp bookmark** (`open_ftp_bookmark`): Open a bookmarked URL.
+- **Remove ftp bookmark** (`remove_ftp_bookmark`): Remove a bookmarked URL.
+- **Open ftp history** (`open_ftp_history`): Open a previous URL.
+- **Remove ftp history** (`remove_ftp_history`): Remove the whole connection history.
+
+### Connection URL
+
+The URL must follow the format below:
+
+```
+ftp[s]://[user[:password]@]ftp.host[:port][/path/to/dir]
+```
 
 ## Features
 - Support for URL-encoded chars in user/password (e.g. `@` -> `%40`).
 - Show extra file/directory attributes: **Permissions**, **Owner** and **Group**.
+- Connection pool under the hood for a better overall performance.
 - Bookmarks.
 - History.
 - File view/edit.
 
 ## TODO
 - Allow setting file/folder permissions, if applicable.
+- Limit number of simultaneous connections to avoid `ftplib.error_temp: 421 Too many connections from the same IP address.`.
 
 ## Known issues
 - Currently there is no way to close an active connection.
@@ -33,7 +46,7 @@ A [fman](https://fman.io/) FTP Client that uses the powerful [ftputil](https://f
 
 ## History
 
-- See the [CHANGELOG](CHANGELOG.md)
+See the [CHANGELOG](CHANGELOG.md).
 
 ## Credits
 

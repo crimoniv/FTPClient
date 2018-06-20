@@ -4,7 +4,6 @@ import stat
 from datetime import datetime
 from io import UnsupportedOperation
 from os.path import commonprefix, join as pathjoin
-
 from tempfile import NamedTemporaryFile
 
 from fman import fs, show_status_message
@@ -62,6 +61,9 @@ class FtpFs(FileSystem):
             return ftp.conn.path.isdir(ftp.path)
 
     def iterdir(self, path):
+        # XXX avoid errors on URLs without connection details
+        if not path:
+            return
         show_status_message('Loading %s...' % (path,))
         with FtpWrapper(self.scheme + path) as ftp:
             for name in ftp.conn.listdir(ftp.path):

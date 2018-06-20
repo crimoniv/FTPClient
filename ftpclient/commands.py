@@ -1,8 +1,9 @@
+from operator import itemgetter
 from urllib.parse import urlparse
 
 from fman import \
-    DirectoryPaneCommand, QuicksearchItem, YES, NO, show_alert, show_prompt, \
-    show_quicksearch, load_json
+    DirectoryPaneCommand, NO, QuicksearchItem, YES, load_json, show_alert, \
+    show_prompt, show_quicksearch
 from fman.url import splitscheme
 
 from .filesystems import is_ftp
@@ -12,7 +13,7 @@ class OpenFtpLocation(DirectoryPaneCommand):
     def __call__(self):
         text, ok = show_prompt(
             'Please enter the URL',
-            default='ftp[s]://user[:password]@other.host[:port]/some_dir')
+            default='ftp[s]://[user[:password]@]ftp.host[:port][/path/to/dir]')
         if text and ok:
             self.pane.set_path(text)
             return
@@ -36,7 +37,7 @@ class OpenFtpBookmark(DirectoryPaneCommand):
         for item in sorted(bookmarks.keys()):
             try:
                 index = item.lower().index(query)
-            except ValueError as not_found:
+            except ValueError:
                 continue
             else:
                 highlight = range(index, index + len(query))
@@ -112,7 +113,7 @@ class RemoveFtpBookmark(DirectoryPaneCommand):
         for item in sorted(bookmarks.keys()):
             try:
                 index = item.lower().index(query)
-            except ValueError as not_found:
+            except ValueError:
                 continue
             else:
                 highlight = range(index, index + len(query))
@@ -129,10 +130,11 @@ class OpenFtpHistory(DirectoryPaneCommand):
         bookmarks = \
             load_json('FTP History.json', default={})
 
-        for item, _ in sorted(bookmarks.items(), key=lambda i: i[1]):
+        for item, _ in sorted(
+                bookmarks.items(), key=itemgetter(1), reverse=True):
             try:
                 index = item.lower().index(query)
-            except ValueError as not_found:
+            except ValueError:
                 continue
             else:
                 highlight = range(index, index + len(query))

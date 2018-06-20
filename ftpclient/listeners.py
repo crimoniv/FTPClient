@@ -3,7 +3,7 @@ from tempfile import NamedTemporaryFile
 
 from core.commands import _open_local_file
 
-from fman import DirectoryPaneListener, fs, show_alert, YES, NO, load_json
+from fman import DirectoryPaneListener, NO, YES, fs, load_json, show_alert
 from fman.url import splitscheme
 
 from .filesystems import is_ftp
