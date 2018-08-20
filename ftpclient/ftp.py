@@ -13,6 +13,8 @@ except ImportError:
         os.path.join(os.path.dirname(__file__), 'ftputil-3.4'))
     import ftputil
 
+from .exceptions import AuthError
+
 
 class FtpSession(ftplib.FTP):
     def __init__(self, host, port, user, password):
@@ -48,16 +50,21 @@ class FtpWrapper():
         if self.hash in self.__conn_pool:
             try:
                 self.conn._session.voidcmd('NOOP')
-            except:
+            except Exception:
                 pass  # Assume connection timeout
             else:
                 return self
 
         session_factory = \
             FtpTlsSession if self._scheme == 'ftps://' else FtpSession
-        ftp_host = ftputil.FTPHost(
-            self._host, self._port, self._user, self._passwd,
-            session_factory=session_factory)
+        try:
+            ftp_host = ftputil.FTPHost(
+                self._host, self._port, self._user, self._passwd,
+                session_factory=session_factory)
+        except ftputil.error.PermanentError as e:
+            if e.errno == 530:
+                raise AuthError(e.strerror) from e
+            raise
 
         self.__conn_pool[self.hash] = ftp_host
         return self

@@ -6,17 +6,24 @@ from fman import \
     show_prompt, show_quicksearch
 from fman.url import splitscheme
 
+from .exceptions import AuthError
 from .filesystems import is_ftp
 
 
 class OpenFtpLocation(DirectoryPaneCommand):
     def __call__(self):
-        text, ok = show_prompt(
-            'Please enter the URL',
-            default='ftp[s]://[user[:password]@]ftp.host[:port][/path/to/dir]')
-        if text and ok:
-            self.pane.set_path(text)
-            return
+        prompt_text = 'Please enter the URL'
+        prompt_default = \
+            'ftp[s]://[user[:password]@]ftp.host[:port][/path/to/dir]'
+        while True:
+            text, ok = show_prompt(prompt_text, default=prompt_default)
+            if not text or not ok:
+                break
+            try:
+                self.pane.set_path(text)
+            except AuthError as e:
+                prompt_text = 'Wrong credentials, please check the URL'
+                prompt_default = text
 
 
 class OpenFtpBookmark(DirectoryPaneCommand):
