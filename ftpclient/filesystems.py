@@ -6,14 +6,28 @@ from io import UnsupportedOperation
 from os.path import commonprefix, join as pathjoin
 from tempfile import NamedTemporaryFile
 
-from fman import fs, show_status_message
+from fman import fs, show_alert, show_status_message
 from fman.fs import FileSystem, cached
 from fman.url import join as urljoin, splitscheme
 
+from .exceptions import FTPClientError, FTPError, TemporaryError
 from .ftp import FtpWrapper
 
 is_ftp = re.compile('^ftps?://').match
 is_file = re.compile('^file://').match
+
+
+def tmp_exc_to_status(func):
+    def wrapper(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        # except TemporaryError as e:
+        #     show_status_message(str(e))
+        # except (FTPClientError, FTPError) as e:
+        #     show_alert(str(e))
+        except Exception:
+            raise
+    return wrapper
 
 
 class FtpFs(FileSystem):
@@ -26,40 +40,48 @@ class FtpFs(FileSystem):
             'ftpclient.columns.Group')
 
     @cached
+    @tmp_exc_to_status
     def size_bytes(self, path):
         with FtpWrapper(self.scheme + path) as ftp:
             return ftp.conn.path.getsize(ftp.path)
 
     @cached
+    @tmp_exc_to_status
     def modified_datetime(self, path):
         with FtpWrapper(self.scheme + path) as ftp:
             return datetime.utcfromtimestamp(ftp.conn.path.getmtime(ftp.path))
 
     @cached
+    @tmp_exc_to_status
     def get_permissions(self, path):
         with FtpWrapper(self.scheme + path) as ftp:
             return stat.filemode(ftp.conn.lstat(ftp.path).st_mode)
 
     @cached
+    @tmp_exc_to_status
     def get_owner(self, path):
         with FtpWrapper(self.scheme + path) as ftp:
             return ftp.conn.lstat(ftp.path).st_uid
 
     @cached
+    @tmp_exc_to_status
     def get_group(self, path):
         with FtpWrapper(self.scheme + path) as ftp:
             return ftp.conn.lstat(ftp.path).st_gid
 
     @cached
+    @tmp_exc_to_status
     def exists(self, path):
         with FtpWrapper(self.scheme + path) as ftp:
             return ftp.conn.path.exists(ftp.path)
 
     @cached
+    @tmp_exc_to_status
     def is_dir(self, path):
         with FtpWrapper(self.scheme + path) as ftp:
             return ftp.conn.path.isdir(ftp.path)
 
+    @tmp_exc_to_status
     def iterdir(self, path):
         # XXX avoid errors on URLs without connection details
         if not path:
@@ -71,6 +93,7 @@ class FtpFs(FileSystem):
                 yield name
         show_status_message('Ready.', timeout_secs=0)
 
+    @tmp_exc_to_status
     def delete(self, path):
         with FtpWrapper(self.scheme + path) as ftp:
             if self.is_dir(path):
@@ -78,14 +101,17 @@ class FtpFs(FileSystem):
             else:
                 ftp.conn.remove(ftp.path)
 
+    @tmp_exc_to_status
     def move_to_trash(self, path):
         # ENOSYS: Function not implemented
         raise OSError(errno.ENOSYS, "FTP has no Trash support")
 
+    @tmp_exc_to_status
     def mkdir(self, path):
         with FtpWrapper(self.scheme + path) as ftp:
             ftp.conn.makedirs(ftp.path)
 
+    @tmp_exc_to_status
     def touch(self, path):
         if self.exists(path):
             raise OSError(errno.EEXIST, "File exists")
@@ -93,9 +119,11 @@ class FtpFs(FileSystem):
             with NamedTemporaryFile(delete=True) as tmp:
                 ftp.conn.upload(tmp.name, ftp.path)
 
+    @tmp_exc_to_status
     def samefile(self, path1, path2):
         return path1 == path2
 
+    @tmp_exc_to_status
     def copy(self, src_url, dst_url):
         # Recursive copy
         if fs.is_dir(src_url):
@@ -121,6 +149,7 @@ class FtpFs(FileSystem):
         else:
             raise UnsupportedOperation
 
+    @tmp_exc_to_status
     def move(self, src_url, dst_url):
         # Rename on same server
         src_scheme, src_path = splitscheme(src_url)
@@ -136,6 +165,7 @@ class FtpFs(FileSystem):
         if fs.exists(src_url):
             fs.delete(src_url)
 
+    @tmp_exc_to_status
     def get_stats(self, path):
         with FtpWrapper(self.scheme + path) as ftp:
             lstat = ftp.conn.lstat(ftp.path)

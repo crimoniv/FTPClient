@@ -6,7 +6,7 @@ from fman import \
     show_prompt, show_quicksearch
 from fman.url import splitscheme
 
-from .exceptions import AuthError
+from .exceptions import AuthenticationError, HostUnreachableError
 from .filesystems import is_ftp
 
 
@@ -21,9 +21,13 @@ class OpenFtpLocation(DirectoryPaneCommand):
                 break
             try:
                 self.pane.set_path(text)
-            except AuthError as e:
+            except AuthenticationError:
                 prompt_text = 'Wrong credentials, please check the URL'
-                prompt_default = text
+            except HostUnreachableError:
+                prompt_text = 'Host unreachable, please check the URL'
+            else:
+                return
+            prompt_default = text
 
 
 class OpenFtpBookmark(DirectoryPaneCommand):

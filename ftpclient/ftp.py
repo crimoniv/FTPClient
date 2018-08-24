@@ -1,19 +1,24 @@
+import errno
 import ftplib
+import re
+import socket
 import threading
 from urllib.parse import unquote, urlparse
 
 from fman import load_json
 
-try:
-    import ftputil
-except ImportError:
-    import os
-    import sys
-    sys.path.append(
-        os.path.join(os.path.dirname(__file__), 'ftputil-3.4'))
-    import ftputil
+import ftputil
 
-from .exceptions import AuthError
+from .exceptions import \
+    AuthenticationError, HostUnreachableError, TemporaryError
+
+ERRNO_RE = re.compile(r'^\[Errno (-?\d+)\]')
+
+
+def parse_errno(s):
+    match = ERRNO_RE.match(s)
+    if match:
+        return int(match.group(1))
 
 
 class FtpSession(ftplib.FTP):
@@ -22,6 +27,7 @@ class FtpSession(ftplib.FTP):
         self.connect(host, port)
         # FIXME ftplib.error_temp: 421 Too many connections from the
         #       same IP address.
+        self.set_pasv(False)
         self.login(user, password)
 
 
@@ -29,6 +35,7 @@ class FtpTlsSession(ftplib.FTP_TLS):
     def __init__(self, host, port, user, password):
         super().__init__()
         self.connect(host, port)
+        self.set_pasv(False)
         self.login(user, password)
         self.prot_p()
 
@@ -61,9 +68,25 @@ class FtpWrapper():
             ftp_host = ftputil.FTPHost(
                 self._host, self._port, self._user, self._passwd,
                 session_factory=session_factory)
+        except ftputil.error.TemporaryError as e:
+            raise TemporaryError(e.strerror) from e
         except ftputil.error.PermanentError as e:
+            # from fman import show_alert
+            # show_alert('dir(e) = %s' % (dir(e),))
+            # show_alert('type(e) = %s' % (type(e),))
+            # show_alert('e.errno = %s' % (e.errno,))
+            # show_alert('e.strerror = %s' % (e.strerror,))
             if e.errno == 530:
-                raise AuthError(e.strerror) from e
+                raise AuthenticationError(e.strerror) from e
+            raise
+        except ftputil.error.FTPOSError as e:
+            # FIX e.errno == None
+            if e.errno is None:
+                e.errno = parse_errno(e.strerror)
+            if e.errno == errno.EHOSTUNREACH:  # 113
+                raise HostUnreachableError(e.strerror) from e
+            if e.errno == socket.EAI_NONAME:  # -2
+                raise HostUnreachableError(e.strerror) from e
             raise
 
         self.__conn_pool[self.hash] = ftp_host
